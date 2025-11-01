@@ -20,22 +20,24 @@ options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
 
+# Initial body position
 body_x = 0
 body_y = 500
 
 
+# Pixel to graph
 def actual_to_relative_coords(x, y, h,w, scale=0.3):
     x = -1*(x-w/2-body_x)*scale
     y = -1*(y-h+body_y)*scale
     return x,y
 
+# Graph to pixel
 def relative_to_actual_coords(x, y, h, w):
     x = x + w/2 + body_x
     y = -1*y + h - body_y
     return int(x),  int(y)
 
-
-
+# Update body position based on gestures
 def update_body_position(LhandPos, RhandPos, h,w):
     global body_x, body_y
     Lx, Ly = actual_to_relative_coords(LhandPos.x*w, LhandPos.y*h, h, w)
