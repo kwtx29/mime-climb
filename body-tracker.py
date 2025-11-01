@@ -33,8 +33,6 @@ def relative_to_actual_coords(x, y, h, w):
     y = -1*y + h - body_y
     return int(x),  int(y)
 
-
-
 def build_overlay_items_from_results(image, results):
     """Return a list of overlay items (lines + circles) for the current frame."""
     overlay_items = []
