@@ -1,6 +1,8 @@
 #Required things
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 
 
 mp_drawing = mp.solutions.drawing_utils
@@ -11,12 +13,11 @@ import overlay_lib
 from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle
 
 cap = cv2.VideoCapture(0)
-hands = mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=2,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5,
-)
+
+# STEP 2: Create an GestureRecognizer object.
+base_options = python.BaseOptions(model_asset_path='gesture_recognizer.task')
+options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2)
+recognizer = vision.GestureRecognizer.create_from_options(options)
 
 
 body_x = 0
@@ -49,15 +50,15 @@ def build_overlay_items_from_results(results):
     """Return a list of overlay items (lines + circles) for the current frame."""
     overlay_items = []
     h, w = 1080, 1920
-    if not results or not results.multi_hand_landmarks:
+    if not results or not results.hand_landmarks:
         return overlay_items
     LRpos = []
-    for hl in results.multi_hand_landmarks:
-        LRpos+=[hl.landmark[mp_hands.HandLandmark.WRIST]]
+    for hl in results.hand_landmarks:
+        LRpos += [hl[0]]
         # Draw skeleton connections
         for start_idx, end_idx in mp_hands.HAND_CONNECTIONS:
-            s = hl.landmark[start_idx]
-            e = hl.landmark[end_idx]
+            s = hl[start_idx]
+            e = hl[end_idx]
             sx, sy = actual_to_relative_coords(s.x * w, s.y * h, h, w)
             ex, ey = actual_to_relative_coords(e.x * w, e.y * h, h, w)
             sx, sy = relative_to_actual_coords(sx, sy, h, w)
@@ -72,7 +73,7 @@ def build_overlay_items_from_results(results):
                 )
             )
         # Draw landmark circles
-        for lm in hl.landmark:
+        for lm in hl:
             x,y = actual_to_relative_coords(lm.x * w, lm.y * h, h, w)
             x,y = relative_to_actual_coords(x, y, h, w)
 
@@ -91,12 +92,12 @@ def build_overlay_items_from_results(results):
 
 def callback():
     """Overlay drawlist callback used by overlay_lib. Returns items for the latest camera frame."""
-    ret, image = cap.read()
+    ret, frame = cap.read()
     if not ret:
         return []
     # Flip + convert for mediapipe
-    mp_image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
-    results = hands.process(mp_image)
+    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    results = recognizer.recognize(image)
     # Build overlay items from results (use the original BGR image size)
     items = build_overlay_items_from_results(results)
     return items
@@ -108,35 +109,3 @@ overlay = overlay_lib.Overlay(
 
 overlay.spawn()
 
-try:
-    while True:
-        ret, image = cap.read()
-        if not ret:
-            break
-        # Flip and convert for display / processing
-        mp_image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
-        results = hands.process(mp_image)
-        # Build overlay items and hand them to the overlay instance for this frame
-        overlay_items = build_overlay_items_from_results(image, results)
-        overlay.drawlistCallback = lambda items=overlay_items: items
-
-        # Optional: show the camera image locally with MediaPipe landmark drawing for debugging
-        display_img = cv2.cvtColor(mp_image, cv2.COLOR_RGB2BGR)
-        if results.multi_hand_landmarks:
-            for hl in results.multi_hand_landmarks:
-                mp_drawing.draw_landmarks(
-                    display_img,
-                    hl,
-                    mp_hands.HAND_CONNECTIONS,
-                    mp_drawing.DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=3),
-                    mp_drawing.DrawingSpec(color=(121, 44, 250), thickness=2, circle_radius=2),
-                )
-
-        cv2.imshow('Hand Tracking', display_img)
-        key = cv2.waitKey(1) & 0xFF
-        if key == 27:  # ESC
-            break
-finally:
-    cap.release()
-    cv2.destroyAllWindows()
-    overlay.terminate()  # if overlay_lib exposes terminate/stop; if not, safe to ignore
