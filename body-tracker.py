@@ -33,6 +33,14 @@ def relative_to_actual_coords(x, y, h, w):
     y = -1*y + h - body_y
     return int(x),  int(y)
 
+
+
+def update_body_position(LhandPos, RhandPos):
+    global body_x, body_y
+    
+
+
+
 def build_overlay_items_from_results(image, results):
     """Return a list of overlay items (lines + circles) for the current frame."""
     overlay_items = []
@@ -66,7 +74,8 @@ def build_overlay_items_from_results(image, results):
             overlay_items.append(
                 FlDrawCircle(Vector2D(x, y), 6, RgbaColor(255, 255, 255, 255), RgbaColor(255, 255, 255, 255), 0)
             )
-    overlay_items.append(FlDrawCircle(Vector2D(960, 300), 50, RgbaColor(255, 0, 0, 128), RgbaColor(255, 0, 0, 255), 2))
+    x, y = relative_to_actual_coords(body_x, body_y, h, w)
+    overlay_items.append(FlDrawCircle(Vector2D(x,y), 50, RgbaColor(255, 0, 0, 128), RgbaColor(255, 0, 0, 255), 2))
     return overlay_items
 
 def callback():
