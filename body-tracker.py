@@ -20,8 +20,6 @@ hands = mp_hands.Hands(
 
 
 
-
-
 def build_overlay_items_from_results(image, results):
     """Return a list of overlay items (lines + circles) for the current frame."""
     overlay_items = []
