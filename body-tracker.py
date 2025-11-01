@@ -23,7 +23,7 @@ body_x = 0
 body_y = 0
 
 
-def actual_to_relative_coords(x, y, h,w, scale=1.0):
+def actual_to_relative_coords(x, y, h,w, scale=0.3):
     x = (x-w/2-body_x)*scale
     y = -1*(y-h+body_y)*scale
     return x,y
@@ -35,26 +35,31 @@ def relative_to_actual_coords(x, y, h, w):
 
 
 
-def update_body_position(LhandPos, RhandPos):
+def update_body_position(LhandPos, RhandPos, h,w):
     global body_x, body_y
-    
+    Lx, Ly = LhandPos.x*w, LhandPos.y*h
+    Rx, Ry = RhandPos.x*w, RhandPos.y*h
+    body_x = (Lx + Rx) / 2
+    body_y = (Ly + Ry) / 2
 
 
 
-def build_overlay_items_from_results(image, results):
+
+def build_overlay_items_from_results(results):
     """Return a list of overlay items (lines + circles) for the current frame."""
     overlay_items = []
     h, w = 1080, 1920
     if not results or not results.multi_hand_landmarks:
         return overlay_items
-
+    LRpos = []
     for hl in results.multi_hand_landmarks:
+        LRpos+=[hl.landmark[mp_hands.HandLandmark.WRIST]]
         # Draw skeleton connections
         for start_idx, end_idx in mp_hands.HAND_CONNECTIONS:
             s = hl.landmark[start_idx]
             e = hl.landmark[end_idx]
-            sx, sy = actual_to_relative_coords(s.x * w, s.y * h, h, w, scale=0.5)
-            ex, ey = actual_to_relative_coords(e.x * w, e.y * h, h, w, scale=0.5)
+            sx, sy = actual_to_relative_coords(s.x * w, s.y * h, h, w)
+            ex, ey = actual_to_relative_coords(e.x * w, e.y * h, h, w)
             sx, sy = relative_to_actual_coords(sx, sy, h, w)
             ex, ey = relative_to_actual_coords(ex, ey, h, w)
                 
@@ -68,12 +73,18 @@ def build_overlay_items_from_results(image, results):
             )
         # Draw landmark circles
         for lm in hl.landmark:
-            x,y = actual_to_relative_coords(lm.x * w, lm.y * h, h, w, scale=0.5)
+            x,y = actual_to_relative_coords(lm.x * w, lm.y * h, h, w)
             x,y = relative_to_actual_coords(x, y, h, w)
 
             overlay_items.append(
                 FlDrawCircle(Vector2D(x, y), 6, RgbaColor(255, 255, 255, 255), RgbaColor(255, 255, 255, 255), 0)
             )
+            
+
+    dragging = True
+    if dragging and len(LRpos) == 2:
+        update_body_position(LRpos[0], LRpos[1], h, w)
+
     x, y = relative_to_actual_coords(body_x, body_y, h, w)
     overlay_items.append(FlDrawCircle(Vector2D(x,y), 50, RgbaColor(255, 0, 0, 128), RgbaColor(255, 0, 0, 255), 2))
     return overlay_items
@@ -87,7 +98,7 @@ def callback():
     mp_image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
     results = hands.process(mp_image)
     # Build overlay items from results (use the original BGR image size)
-    items = build_overlay_items_from_results(image, results)
+    items = build_overlay_items_from_results(results)
     return items
 
 overlay = overlay_lib.Overlay(
