@@ -8,7 +8,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
 import overlay_lib
-from overlay_lib import Vector2D, RgbaColor, SkDrawCircle
+from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle
 
 cap = cv2.VideoCapture(0)
 hands = mp_hands.Hands(
@@ -18,10 +18,14 @@ hands = mp_hands.Hands(
     min_tracking_confidence=0.5,
 )
 
+
+
+
+
 def build_overlay_items_from_results(image, results):
     """Return a list of overlay items (lines + circles) for the current frame."""
     overlay_items = []
-    h, w = image.shape[:2]
+    h, w = 1080, 1920
     if not results or not results.multi_hand_landmarks:
         return overlay_items
 
@@ -37,7 +41,7 @@ def build_overlay_items_from_results(image, results):
                     Vector2D(sx, sy),
                     Vector2D(ex, ey),
                     RgbaColor(0, 255, 0, 255),
-                    2
+                    12
                 )
             )
         # Draw landmark circles
@@ -45,8 +49,9 @@ def build_overlay_items_from_results(image, results):
             x = int(lm.x * w)
             y = int(lm.y * h)
             overlay_items.append(
-                SkDrawCircle(Vector2D(x, y), 6, RgbaColor(255, 255, 255, 255), 2)
+                FlDrawCircle(Vector2D(x, y), 6, RgbaColor(255, 255, 255, 255), RgbaColor(255, 255, 255, 255), 0)
             )
+    overlay_items.append(FlDrawCircle(Vector2D(960, 300), 50, RgbaColor(255, 0, 0, 128), RgbaColor(255, 0, 0, 255), 2))
     return overlay_items
 
 def callback():
