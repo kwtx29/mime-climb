@@ -37,9 +37,9 @@ def relative_to_actual_coords(x, y, h, w):
 
 def update_body_position(LhandPos, RhandPos, h,w):
     global body_x, body_y
-    Lx, Ly = LhandPos.x*w, LhandPos.y*h
-    Rx, Ry = RhandPos.x*w, RhandPos.y*h
-    body_x = (Lx + Rx) / 2
+    Lx, Ly = LhandPos.x*w*0.3, LhandPos.y*h*0.3
+    Rx, Ry = RhandPos.x*w*0.3, RhandPos.y*h*0.3
+    body_x = w*0.3 - (Lx + Rx) / 2
     body_y = (Ly + Ry) / 2
 
 
