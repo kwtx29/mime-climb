@@ -19,8 +19,19 @@ hands = mp_hands.Hands(
 )
 
 
+body_x = 0
+body_y = 0
 
 
+def actual_to_relative_coords(x, y, h,w, scale=1.0):
+    x = (x-w/2-body_x)*scale
+    y = -1*(y-h+body_y)*scale
+    return x,y
+
+def relative_to_actual_coords(x, y, h, w):
+    x = x + w/2 + body_x
+    y = -1*y + h - body_y
+    return int(x),  int(y)
 
 def build_overlay_items_from_results(image, results):
     """Return a list of overlay items (lines + circles) for the current frame."""
@@ -34,8 +45,11 @@ def build_overlay_items_from_results(image, results):
         for start_idx, end_idx in mp_hands.HAND_CONNECTIONS:
             s = hl.landmark[start_idx]
             e = hl.landmark[end_idx]
-            sx, sy = int(s.x * w), int(s.y * h)
-            ex, ey = int(e.x * w), int(e.y * h)
+            sx, sy = actual_to_relative_coords(s.x * w, s.y * h, h, w, scale=0.5)
+            ex, ey = actual_to_relative_coords(e.x * w, e.y * h, h, w, scale=0.5)
+            sx, sy = relative_to_actual_coords(sx, sy, h, w)
+            ex, ey = relative_to_actual_coords(ex, ey, h, w)
+                
             overlay_items.append(
                 overlay_lib.DrawLine(
                     Vector2D(sx, sy),
@@ -46,8 +60,9 @@ def build_overlay_items_from_results(image, results):
             )
         # Draw landmark circles
         for lm in hl.landmark:
-            x = int(lm.x * w)
-            y = int(lm.y * h)
+            x,y = actual_to_relative_coords(lm.x * w, lm.y * h, h, w, scale=0.5)
+            x,y = relative_to_actual_coords(x, y, h, w)
+
             overlay_items.append(
                 FlDrawCircle(Vector2D(x, y), 6, RgbaColor(255, 255, 255, 255), RgbaColor(255, 255, 255, 255), 0)
             )
