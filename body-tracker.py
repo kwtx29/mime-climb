@@ -21,11 +21,11 @@ recognizer = vision.GestureRecognizer.create_from_options(options)
 
 
 body_x = 0
-body_y = 0
+body_y = 500
 
 
 def actual_to_relative_coords(x, y, h,w, scale=0.3):
-    x = (x-w/2-body_x)*scale
+    x = -1*(x-w/2-body_x)*scale
     y = -1*(y-h+body_y)*scale
     return x,y
 
@@ -38,10 +38,10 @@ def relative_to_actual_coords(x, y, h, w):
 
 def update_body_position(LhandPos, RhandPos, h,w):
     global body_x, body_y
-    Lx, Ly = LhandPos.x*w*0.3, LhandPos.y*h*0.3
-    Rx, Ry = RhandPos.x*w*0.3, RhandPos.y*h*0.3
-    body_x = w*0.3 - (Lx + Rx) / 2
-    body_y = (Ly + Ry) / 2
+    Lx, Ly = actual_to_relative_coords(LhandPos.x*w, LhandPos.y*h, h, w)
+    Rx, Ry = actual_to_relative_coords(RhandPos.x*w, RhandPos.y*h, h, w)
+    body_x =  ((Lx + Rx) / 2)*0.3
+    body_y = (h- (Ly + Ry) / 2)*0.3
 
 
 
@@ -81,12 +81,15 @@ def build_overlay_items_from_results(results):
                 FlDrawCircle(Vector2D(x, y), 6, RgbaColor(255, 255, 255, 255), RgbaColor(255, 255, 255, 255), 0)
             )
             
-
-    dragging = True
+    dragging = False
+    if len(LRpos) == 2:
+        if results.gestures[0][0].category_name == "Closed_Fist" and results.gestures[1][0].category_name == "Closed_Fist":
+            dragging = True
     if dragging and len(LRpos) == 2:
         update_body_position(LRpos[0], LRpos[1], h, w)
 
-    x, y = relative_to_actual_coords(body_x, body_y, h, w)
+    
+    x,y = relative_to_actual_coords(0, 0, h, w)
     overlay_items.append(FlDrawCircle(Vector2D(x,y), 50, RgbaColor(255, 0, 0, 128), RgbaColor(255, 0, 0, 255), 2))
     return overlay_items
 
