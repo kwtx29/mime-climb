@@ -1,1 +1,1 @@
-Hey this is the file we will update it.... soon
+To run the project download everything and run mime_climb.py
