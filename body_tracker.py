@@ -183,7 +183,7 @@ class Tracker:
 
                 if DrawLine:
                     overlay_items.append(
-                        DrawLine(Vec(x_l_s, y_l_s), Vec(x_l_e, y_l_e), Rgba(0, 255, 0, 200), 6)
+                        DrawLine(Vec(x_l_s, y_l_s), Vec(x_l_e, y_l_e), Rgba(143, 229, 152, 220), 6)
                     )
 
             # Draw landmark circles (reduced radius)
@@ -191,8 +191,8 @@ class Tracker:
                 x_a, y_a = rel_to_actual(x_r, y_r)
                 x_l, y_l = actual_to_body(x_a, y_a)
                 overlay_items.append(
-                    FlCircle(Vec(x_l, y_l), 3, Rgba(255, 255, 255, 220), Rgba(255, 255, 255, 220), 0)
-                )
+                        FlCircle(Vec(x_l, y_l), 3, Rgba(255, 255, 255, 220), Rgba(143, 229, 152, 220), 0)
+                    )
 
 
         # Click handling using pointer Z
