@@ -32,7 +32,7 @@ def get_gesture(result, h, w, frame=None):
             if frame is not None:
 
                 # draw each landmark on that hand
-                for x, y in hand_data['relative_landmarks']:
+                for x, y, z in hand_data['relative_landmarks']:
                     px = int(x * w)
                     py = int(y * h)
                     cv2.circle(frame, (px,py), 4, (0,255,0), -1)
