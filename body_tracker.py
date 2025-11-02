@@ -143,6 +143,16 @@ class Tracker:
         Vec = Vector2D
         Rgba = RgbaColor
 
+        # Draw body marker
+        overlay_items.append(
+            DrawImage(
+                Vector2D(self.body_x, self.body_y - 32),
+                'body_marker.png',
+                Size2D(100, 190),
+                Vector2D(0, 0)
+        ))
+        
+        
         for hand in hands:
             relative_landmarks = hand.get('relative_landmarks', [])
             if not relative_landmarks:
@@ -190,7 +200,6 @@ class Tracker:
             point_hand = point_hand.index(True)
             z_min = min(i for _, _, i in pointer_z_values) if pointer_z_values else 1.0
             z_bin = z_min <= Z_THRESHOLD
-            print(f"Pointer Z: {z_min:.3f}, Click Bin: {z_bin}, Prior Bin: {self.prior_z_bin}")
             if z_bin and (z_bin != self.prior_z_bin):
                 pg.click(pointer_z_values[point_hand][0], pointer_z_values[point_hand][1], button='left')
             self.prior_z_bin = z_bin
@@ -225,14 +234,7 @@ class Tracker:
             if gestures and all(g == 'Closed_Fist' for g in gestures):
                 self.prior_swipe_start = wrist_positions.copy()
 
-        # Draw body marker (smaller, semi-transparent)
-        overlay_items.append(
-            DrawImage(
-                Vector2D(self.body_x, self.body_y - 32),
-                'body_marker.png',
-                Size2D(64, 64),
-                Vector2D(0, 0)
-        ))
+
 
         self.prior_overlay_results = overlay_items
         return overlay_items
