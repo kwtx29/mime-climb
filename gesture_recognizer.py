@@ -10,31 +10,45 @@ options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
 
-def get_gesture(frame):
-   
-    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+def get_gesture(result, h, w, frame=None):
 
-    result = recognizer.recognize(image)
-    
-    h, w, _ = frame.shape
+    hands = []
 
     if result.hand_landmarks:
+
         # iterate hands
         for i, hand in enumerate(result.hand_landmarks):
 
-            # draw each landmark on that hand
-            for lm in hand:
-                px = int(lm.x * w)
-                py = int(lm.y * h)
-                cv2.circle(frame, (px,py), 4, (0,255,0), -1)
+            hand_data = {
+                'relative_landmarks': list((lm.x, lm.y, lm.z) for lm in hand),
+                'gesture': None,
+            }
 
-            # show gesture label for THIS hand (if exists)
             if result.gestures and len(result.gestures) > i and result.gestures[i]:
                 gesture = result.gestures[i][0].category_name
-                # use first landmark as anchor text point
-                first = hand[0]
-                cv2.putText(frame, gesture, (int(first.x*w), int(first.y*h)-10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+
+                hand_data['gesture'] = gesture
+
+            if frame is not None:
+
+                # draw each landmark on that hand
+                for x, y, z in hand_data['relative_landmarks']:
+                    px = int(x * w)
+                    py = int(y * h)
+                    cv2.circle(frame, (px,py), 4, (0,255,0), -1)
+
+                    # use first landmark as anchor text point
+                    if hand_data['gesture']:
+
+                        first = hand[0]
+                        cv2.putText(frame, gesture, (int(first.x*w), int(first.y*h)-10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+                    
+
+            hands.append(hand_data)
+
+        return hands
+                    
 
         # Top gesture: 
         # Category(index=-1,
@@ -47,6 +61,20 @@ def get_gesture(frame):
         #              z=-0.08733733743429184,
         #              visibility=0.0,
         #              presence=0.0),
+
+
+
+
+def get_gesture_helper(frame):
+
+    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+    result = recognizer.recognize(image)
+    
+    h, w, _ = frame.shape
+
+    get_gesture(result, h, w, frame)
+
 
 
 # Option to run
@@ -67,7 +95,7 @@ if __name__ == '__main__':
 
         frame = cv2.flip(frame, 1)
 
-        get_gesture(frame)
+        get_gesture_helper(frame)
 
         # Display the resulting frame
         cv2.imshow('frame', frame)
