@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 Z_THRESHOLD = -0.12
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
-SCALE = 0.3
+SCALE = 0.2
 
 # MediaPipe & gesture recognizer init (created once)
 mp_drawing = mp.solutions.drawing_utils
