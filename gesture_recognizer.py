@@ -45,7 +45,8 @@ def get_result(result, output_image: mp.Image, timestamp_ms: int):
 options = GestureRecognizerOptions(
     base_options=BaseOptions(model_asset_path='gesture_recognizer.task'),
     running_mode=VisionRunningMode.LIVE_STREAM,
-    result_callback=get_result)
+    result_callback=get_result,
+    num_hands=2)
 
 
 
