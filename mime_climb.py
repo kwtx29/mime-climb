@@ -5,8 +5,6 @@ import queue
 import threading
 import time
 import pyautogui as pg
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
 import overlay_lib
 from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D
 from gesture_recognizer import get_gesture, get_gesture_helper
@@ -30,13 +28,23 @@ if not cap.isOpened():
     print("Cannot open camera")
     exit()
 
+# Prefer a smaller camera resolution and FPS to reduce CPU/GPU load
+try:
+    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+    # cap.set(cv2.CAP_PROP_FPS, 30)
+    #^reduction of accuracy to save resources
 
-# use a lower resolution for processing to speed up recognizer
-PROC_WIDTH = 640
+    # Reduce internal buffering to minimize latency
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    # Many webcams are faster with MJPG
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+except Exception:
+    pass
 
-base_options = python.BaseOptions(model_asset_path='gesture_recognizer.task')
-options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2)
-recognizer = vision.GestureRecognizer.create_from_options(options)
+
+# NOTE: Gesture recognition is handled in gesture_recognizer.py via LIVE_STREAM callback.
 
 
 # Shared storage for latest overlay items produced by the processing thread
@@ -234,6 +242,9 @@ def _process_loop():
                 _latest_overlay_items = items
         except Exception:
             continue
+        # Throttle processing to avoid pegging a CPU core
+        time.sleep(0.008)
+
 
 def _camera_loop():
     """Background thread for reading frames from the camera to avoid blocking."""
@@ -245,8 +256,7 @@ def _camera_loop():
             break
         frame = cv2.flip(frame, 1)
         get_gesture_helper(frame)
-        
-        # Yield to other threads, polling camera at ~120Hz
+        # Yield to other threads, target ~60-100 Hz camera polling
         time.sleep(0.008)
 
 
