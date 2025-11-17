@@ -5,11 +5,9 @@ import queue
 import threading
 import time
 import pyautogui as pg
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
 import overlay_lib
 from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D
-from gesture_recognizer import get_gesture
+from gesture_recognizer import get_gesture, get_gesture_helper
 from typing import List, Optional, Tuple
 
 # Constants
@@ -23,39 +21,31 @@ mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 HAND_CONNECTIONS = tuple(mp_hands.HAND_CONNECTIONS)
 
-def open_camera(preferred_index=0):
-    # ... function to robustly open camera ...
-    backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, 0]
-    for backend in backends:
-        try:
-            cap_to_try = cv2.VideoCapture(preferred_index, backend if backend else cv2.CAP_ANY)
-            if cap_to_try.isOpened():
-                print(f"Successfully opened camera index {preferred_index} with backend {backend}.")
-                cap_to_try.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                return cap_to_try
-        except Exception:
-            pass
-    return None
 
-cap = open_camera(0)
-if not cap:
-    print("Error: Could not open camera with index 0. Trying index 1...")
-    cap = open_camera(1)
 
-if not cap or not cap.isOpened():
-    print("FATAL: Could not open any camera. Exiting.")
+cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+    print("Cannot open camera")
     exit()
 
+# Prefer a smaller camera resolution and FPS to reduce CPU/GPU load
+try:
+    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+    # cap.set(cv2.CAP_PROP_FPS, 30)
+    #^reduction of accuracy to save resources
 
-# use a lower resolution for processing to speed up recognizer
-PROC_WIDTH = 640
+    # Reduce internal buffering to minimize latency
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    # Many webcams are faster with MJPG
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+except Exception:
+    pass
 
-base_options = python.BaseOptions(model_asset_path='gesture_recognizer.task')
-options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2)
-recognizer = vision.GestureRecognizer.create_from_options(options)
 
-# Single-slot queue to always keep latest frame (drop older)
-frame_queue: "queue.Queue" = queue.Queue(maxsize=1)
+# NOTE: Gesture recognition is handled in gesture_recognizer.py via LIVE_STREAM callback.
+
 
 # Shared storage for latest overlay items produced by the processing thread
 _latest_items_lock = threading.Lock()
@@ -121,12 +111,10 @@ class Tracker:
         self.body_x = int(self.smoothed_body_x)
         self.body_y = int(self.smoothed_body_y)
 
-    def build_overlay_items_from_results(self, results):
+    def build_overlay_items(self):
         # If recognizer returns None or empty, reuse prior results
-        if not results or not results.gestures:
-            return self.prior_overlay_results
 
-        hands = get_gesture(results, h=SCREEN_HEIGHT, w=SCREEN_WIDTH)
+        hands = get_gesture(h=SCREEN_HEIGHT, w=SCREEN_WIDTH)
         if not hands:
             return self.prior_overlay_results
 
@@ -248,21 +236,15 @@ def _process_loop():
     global _latest_overlay_items, _running
     while _running:
         try:
-            frame = frame_queue.get(timeout=1.0)
-        except queue.Empty:
-            continue
-
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(cv2.flip(frame, 1), cv2.COLOR_BGR2RGB))
-        
-        try:
-            results = recognizer.recognize(mp_image)
-            items = tracker.build_overlay_items_from_results(results)
-
+            items = tracker.build_overlay_items()
             # publish latest items
             with _latest_items_lock:
                 _latest_overlay_items = items
         except Exception:
             continue
+        # Throttle processing to avoid pegging a CPU core
+        time.sleep(0.008)
+
 
 def _camera_loop():
     """Background thread for reading frames from the camera to avoid blocking."""
@@ -270,24 +252,11 @@ def _camera_loop():
     while _running:
         ret, frame = cap.read()
         if not ret:
-            print("Camera frame read failed. Stopping.")
             _running = False
             break
-
-        # Non-blocking queue update
-        try:
-            # Clear old frame
-            _ = frame_queue.get_nowait()
-        except queue.Empty:
-            pass
-        
-        try:
-            # Put new frame
-            frame_queue.put_nowait(frame)
-        except queue.Full:
-            pass
-        
-        # Yield to other threads, polling camera at ~120Hz
+        frame = cv2.flip(frame, 1)
+        get_gesture_helper(frame)
+        # Yield to other threads, target ~60-100 Hz camera polling
         time.sleep(0.008)
 
 
