@@ -14,7 +14,7 @@ import threading
 import time
 import pyautogui as pg
 import overlay_lib
-from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D
+from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D, DrawText
 from gesture_recognizer import get_gesture, get_gesture_helper
 from typing import List, Optional, Tuple
 
@@ -31,10 +31,15 @@ HAND_CONNECTIONS = tuple(mp_hands.HAND_CONNECTIONS)
 
 
 
+
+
+
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
+    
+
 
 # Prefer a smaller camera resolution and FPS to reduce CPU/GPU load
 try:
@@ -60,6 +65,15 @@ _latest_items_lock = threading.Lock()
 _latest_overlay_items = []
 
 _running = True
+
+
+
+
+
+
+
+
+
 
 
 class Tracker:
@@ -103,6 +117,11 @@ class Tracker:
         x_diff = (x - SCREEN_WIDTH // 2) * SCALE
         y_diff = (y - SCREEN_HEIGHT // 2) * SCALE
         return int(self.body_x + x_diff), int(self.body_y + y_diff)
+    
+    @staticmethod
+    def _click_at(x: int, y: int):
+        pg.click(x=x, y=y, button='left')
+
 
     def update_body_position(self, left: Tuple[int, int], right: Tuple[int, int]):
         if not left or not right:
@@ -198,7 +217,11 @@ class Tracker:
             z_min = min(i for _, _, i in pointer_z_values) if pointer_z_values else 1.0
             z_bin = z_min <= Z_THRESHOLD
             if z_bin and (z_bin != self.prior_z_bin):
-                pg.click(pointer_z_values[point_hand][0], pointer_z_values[point_hand][1], button='left')
+                px, py, _ = pointer_z_values[point_hand]
+                threading.Thread(target=self._click_at, args=(px, py), daemon=True).start()
+
+                
+
             self.prior_z_bin = z_bin
         else:
             self.prior_z_bin = False

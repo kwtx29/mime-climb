@@ -149,6 +149,7 @@ if __name__ == '__main__':
         frame = cv2.flip(frame, 1)
 
         get_gesture_helper(frame)
+        
 
         # Retrieve latest processed output and display from main thread
         display_frame = None
