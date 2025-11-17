@@ -1,7 +1,15 @@
+#nuitka setup
+#nuitka-project: --mode=onefile
+#nuitka-project: --windows-console-mode=disable
+#nuitka-project: --include-data-files={MAIN_DIRECTORY}/body_marker.png=body_marker.png
+#nuitka-project: --include-data-files={MAIN_DIRECTORY}/gesture_recognizer.task=gesture_recognizer.task
+#nuitka-project: --enable-plugin=pyqt5
+
+#^this is shit
+
 #Required things
 import cv2
 import mediapipe as mp
-import queue
 import threading
 import time
 import pyautogui as pg
@@ -65,6 +73,7 @@ class Tracker:
         self.prior_gesture = None
         self.prior_z_bin = False
         self.prior_swipe_start: Optional[List[Tuple[float, float]]] = None
+        self.prior_hand_num = 0
         self.prior_overlay_results: List = []
 
         # smoothing factor (0..1). Lower => smoother/slower
@@ -219,7 +228,10 @@ class Tracker:
 
             self.prior_swipe_start = None
         else:
-            if gestures and all(g == 'Closed_Fist' for g in gestures):
+            if gestures and (n := [g == 'Closed_Fist' for g in gestures].count(True)): #checks if any hand is making a fist
+                self.prior_hand_num = n
+
+            
                 self.prior_swipe_start = wrist_positions.copy()
 
 

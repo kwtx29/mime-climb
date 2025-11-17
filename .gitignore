@@ -1,1 +1,6 @@
 uv/
+mime_climb.dist/
+__pycache__/
+*.pyc
+mime_climb.build/
+mime_climb.onefile-build/
