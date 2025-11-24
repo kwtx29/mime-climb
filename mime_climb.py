@@ -1,12 +1,20 @@
+#nuitka setup
+#nuitka-project: --mode=onefile
+#nuitka-project: --windows-console-mode=disable
+#nuitka-project: --include-data-files={MAIN_DIRECTORY}/body_marker.png=body_marker.png
+#nuitka-project: --include-data-files={MAIN_DIRECTORY}/gesture_recognizer.task=gesture_recognizer.task
+#nuitka-project: --enable-plugin=pyqt5
+
+#^this is shit
+
 #Required things
 import cv2
 import mediapipe as mp
-import queue
 import threading
 import time
 import pyautogui as pg
 import overlay_lib
-from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D
+from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D, DrawText
 from gesture_recognizer import get_gesture, get_gesture_helper
 from typing import List, Optional, Tuple
 
@@ -23,10 +31,15 @@ HAND_CONNECTIONS = tuple(mp_hands.HAND_CONNECTIONS)
 
 
 
+
+
+
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
+    
+
 
 # Prefer a smaller camera resolution and FPS to reduce CPU/GPU load
 try:
@@ -54,6 +67,15 @@ _latest_overlay_items = []
 _running = True
 
 
+
+
+
+
+
+
+
+
+
 class Tracker:
     def __init__(self):
         # body position (screen coords) and smoothed versions
@@ -65,7 +87,12 @@ class Tracker:
         self.prior_gesture = None
         self.prior_z_bin = False
         self.prior_swipe_start: Optional[List[Tuple[float, float]]] = None
+        self.prior_hand_num = 0
         self.prior_overlay_results: List = []
+        
+        self.tick_start = time.time()
+        self.average_build_time = 0.0
+        self.build_count = 0
 
         # smoothing factor (0..1). Lower => smoother/slower
         self.smooth_alpha = 0.45
@@ -94,6 +121,11 @@ class Tracker:
         x_diff = (x - SCREEN_WIDTH // 2) * SCALE
         y_diff = (y - SCREEN_HEIGHT // 2) * SCALE
         return int(self.body_x + x_diff), int(self.body_y + y_diff)
+    
+    @staticmethod
+    def _click_at(x: int, y: int):
+        pg.click(x=x, y=y, button='left')
+
 
     def update_body_position(self, left: Tuple[int, int], right: Tuple[int, int]):
         if not left or not right:
@@ -113,6 +145,8 @@ class Tracker:
 
     def build_overlay_items(self):
         # If recognizer returns None or empty, reuse prior results
+
+        self.tick_start = time.time()
 
         hands = get_gesture(h=SCREEN_HEIGHT, w=SCREEN_WIDTH)
         if not hands:
@@ -189,7 +223,11 @@ class Tracker:
             z_min = min(i for _, _, i in pointer_z_values) if pointer_z_values else 1.0
             z_bin = z_min <= Z_THRESHOLD
             if z_bin and (z_bin != self.prior_z_bin):
-                pg.click(pointer_z_values[point_hand][0], pointer_z_values[point_hand][1], button='left')
+                px, py, _ = pointer_z_values[point_hand]
+                threading.Thread(target=self._click_at, args=(px, py), daemon=True).start()
+
+                
+
             self.prior_z_bin = z_bin
         else:
             self.prior_z_bin = False
@@ -219,17 +257,25 @@ class Tracker:
 
             self.prior_swipe_start = None
         else:
-            if gestures and all(g == 'Closed_Fist' for g in gestures):
+            if gestures and (n := [g == 'Closed_Fist' for g in gestures].count(True)): #checks if any hand is making a fist
+                self.prior_hand_num = n
+
+            
                 self.prior_swipe_start = wrist_positions.copy()
 
 
 
         self.prior_overlay_results = overlay_items
+        
+        #self.build_count += 1
+        #self.average_build_time = ((self.average_build_time * (self.build_count - 1)) + (time.time() - self.tick_start)) / self.build_count
+        #print(f"\rAverage overlay build time: {self.average_build_time*1000:.2f} ms", end='')
         return overlay_items
 
 
 tracker = Tracker()
 
+polling_rate = 1.0 / 60.0  # target ~60 Hz processing
 
 def _process_loop():
     """Background processing thread: consumes the latest frame, runs recognizer, produces overlay items."""
@@ -243,7 +289,7 @@ def _process_loop():
         except Exception:
             continue
         # Throttle processing to avoid pegging a CPU core
-        time.sleep(0.008)
+        time.sleep(polling_rate)  # ~60 Hz
 
 
 def _camera_loop():
@@ -257,7 +303,7 @@ def _camera_loop():
         frame = cv2.flip(frame, 1)
         get_gesture_helper(frame)
         # Yield to other threads, target ~60-100 Hz camera polling
-        time.sleep(0.008)
+        time.sleep(polling_rate / 2.0)
 
 
 # start background processor
@@ -269,11 +315,26 @@ _camera_thread = threading.Thread(target=_camera_loop, daemon=True)
 _camera_thread.start()
 
 
+
+
+last_frame = time.time()
+ticker = 0
+SAMPLE_COUNT = 60
 def callback():
     """Overlay drawlist callback used by overlay_lib. Returns items for the latest camera frame."""
+
     with _latest_items_lock:
         items_to_draw = list(_latest_overlay_items)
-    
+    # global last_frame, ticker
+    # if ticker >= SAMPLE_COUNT:
+    #     now = time.perf_counter()
+    #     elapsed = now - last_frame if now > last_frame else 1e-6
+    #     fps = ticker / elapsed
+    #     print(f"\rOverlay callback FPS: {fps:.2f}", end='')
+    #     ticker = 0
+    #     last_frame = now
+    # else:
+    #     ticker += 1
     return items_to_draw
 
 

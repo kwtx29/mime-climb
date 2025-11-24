@@ -1,4 +1,7 @@
 uv/
+mime_climb.dist/
+mime_climb.build/
+mime_climb.onefile-build/
 
 # Python cache files
 __pycache__/
