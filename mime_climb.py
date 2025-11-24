@@ -18,10 +18,12 @@ from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawIma
 from gesture_recognizer import get_gesture, get_gesture_helper
 from typing import List, Optional, Tuple
 
+
 # Constants
 Z_THRESHOLD = -0.12
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1080
+SCREEN_WIDTH, SCREEN_HEIGHT = pg.size()
+#  = 1920
+#  = 1080
 SCALE = 0.2
 
 # MediaPipe & gesture recognizer init (created once)
