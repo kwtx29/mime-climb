@@ -14,7 +14,7 @@ import threading
 import time
 import pyautogui as pg
 import overlay_lib
-from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D, DrawText
+from overlay_lib import Vector2D, RgbaColor, SkDrawCircle, FlDrawCircle, DrawImage, Size2D
 from gesture_recognizer import get_gesture, get_gesture_helper
 from typing import List, Optional, Tuple
 

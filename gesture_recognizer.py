@@ -4,9 +4,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import cv2
 import threading
-
-
-
+from math import dist
 
 
 BaseOptions = mp.tasks.BaseOptions
@@ -57,7 +55,9 @@ recognizer = GestureRecognizer.create_from_options(options)
 
 
 
-
+def norm_land_dist(lm1, lm2):
+    """Compute normalized distance between two landmarks."""
+    return dist((lm1.x, lm1.y, lm1.z), (lm2.x, lm2.y, lm2.z))
 
 
 
@@ -81,6 +81,16 @@ def get_gesture(h, w, result=None, frame=None):
                 gesture = r.gestures[i][0].category_name
 
                 hand_data['gesture'] = gesture
+                try:
+                    # Additional custom gesture: Pinching
+                    if gesture == 'None' and norm_land_dist(hand[4], hand[8]) < 0.08:
+                        hand_data['gesture'] = 'Pinching'
+                except:
+                    pass
+
+
+
+                    
 
             if frame is not None:
 
@@ -94,7 +104,7 @@ def get_gesture(h, w, result=None, frame=None):
                     if hand_data['gesture']:
 
                         first = hand[0]
-                        cv2.putText(frame, gesture, (int(first.x*w), int(first.y*h)-10),
+                        cv2.putText(frame, hand_data['gesture'], (int(first.x*w), int(first.y*h)-10),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
 
             hands.append(hand_data)
