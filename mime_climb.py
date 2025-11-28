@@ -20,9 +20,8 @@ from typing import List, Optional, Tuple
 
 # Constants
 Z_THRESHOLD = -0.12
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1080
-SCALE = 0.2
+SCREEN_WIDTH, SCREEN_HEIGHT = pg.size()
+SCALE = 0.4
 
 # MediaPipe & gesture recognizer init (created once)
 mp_drawing = mp.solutions.drawing_utils
@@ -252,8 +251,8 @@ class Tracker:
                 y_r = self.average(y_diffs)
                 x_a, y_a = self.relative_to_actual_coords(x_r, y_r)
                 # apply smaller increments to avoid jumps
-                self.body_x += int(x_a * -0.4)
-                self.body_y += int(y_a * -0.4)
+                self.body_x += int(x_a * -0.6 )
+                self.body_y += int(y_a * -0.6)
 
             self.prior_swipe_start = None
         else:
