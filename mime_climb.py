@@ -93,6 +93,12 @@ class Tracker:
         self.average_build_time = 0.0
         self.build_count = 0
 
+        #click and drag threading
+        self._mouse_pos_lock = threading.Lock()
+        self._last_mouse_pos = (0,0)
+        self._drag_thread = threading.Thread(target=self._click_and_drag, daemon=True)
+        self._dragging = False
+
         # smoothing factor (0..1). Lower => smoother/slower
         self.smooth_alpha = 0.45
 
@@ -124,6 +130,21 @@ class Tracker:
     @staticmethod
     def _click_at(x: int, y: int):
         pg.click(x=x, y=y, button='left')
+
+    def _click_and_drag(self):
+        print("Starting drag")
+        with self._mouse_pos_lock:
+            x, y = self._last_mouse_pos
+        pg.mouseDown(x=self._last_mouse_pos[0], y=self._last_mouse_pos[1], button='left')
+        while self._dragging:
+            time.sleep(polling_rate)
+            with self._mouse_pos_lock:
+                x, y = self._last_mouse_pos
+            pg.moveTo(x=x, y=y)
+        
+        with self._mouse_pos_lock:
+            x, y = self._last_mouse_pos
+        pg.mouseUp(x=x, y=y, button='left')
 
 
     def update_body_position(self, left: Tuple[int, int], right: Tuple[int, int]):
@@ -230,8 +251,31 @@ class Tracker:
             self.prior_z_bin = z_bin
         else:
             self.prior_z_bin = False
+        
 
-        # Swipe handling (keeps behaviour but uses smoothed coords)
+        if gestures and any(pinch_hand := [g == 'Pinching' for g in gestures]):# and not all(g == 'Pinching' for g in gestures):
+            print('pinching', end='\r')
+            self._dragging = True
+            pinch_hand = pinch_hand.index(True)
+            with self._mouse_pos_lock:
+                px, py, _ = pointer_z_values[pinch_hand]
+                self._last_mouse_pos = (px, py)
+            if self._drag_thread.is_alive() == False:
+                self._drag_thread = threading.Thread(target=self._click_and_drag, daemon=True)
+                self._drag_thread.start()
+        else:
+            print('not pinching', end='\r')
+            if self._drag_thread.is_alive():
+                # stop dragging
+                with self._mouse_pos_lock:
+                    self._last_mouse_pos = (self._last_mouse_pos[0], self._last_mouse_pos[1])
+                self._dragging = False
+                self._drag_thread.join(timeout=polling_rate)
+
+                
+        
+
+        # Swipe handling
         if self.prior_swipe_start is not None:
             new_left, new_right = self.get_hands(wrist_positions) if wrist_positions else (None, None)
             old_left, old_right = self.get_hands(self.prior_swipe_start)
