@@ -132,7 +132,6 @@ class Tracker:
         pg.click(x=x, y=y, button='left')
 
     def _click_and_drag(self):
-        print("Starting drag")
         with self._mouse_pos_lock:
             x, y = self._last_mouse_pos
         pg.mouseDown(x=self._last_mouse_pos[0], y=self._last_mouse_pos[1], button='left')
@@ -254,7 +253,6 @@ class Tracker:
         
 
         if gestures and any(pinch_hand := [g == 'Pinching' for g in gestures]):# and not all(g == 'Pinching' for g in gestures):
-            print('pinching', end='\r')
             self._dragging = True
             pinch_hand = pinch_hand.index(True)
             with self._mouse_pos_lock:
@@ -264,7 +262,6 @@ class Tracker:
                 self._drag_thread = threading.Thread(target=self._click_and_drag, daemon=True)
                 self._drag_thread.start()
         else:
-            print('not pinching', end='\r')
             if self._drag_thread.is_alive():
                 # stop dragging
                 with self._mouse_pos_lock:

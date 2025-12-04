@@ -20,6 +20,8 @@ _latest_frame = None
 _busy_lock = threading.Lock()
 _busy = False
 
+PINCHING_THRESHOLD = 0.05
+
 
 # Create a gesture recognizer instance with the live stream mode:
 
@@ -83,7 +85,7 @@ def get_gesture(h, w, result=None, frame=None):
                 hand_data['gesture'] = gesture
                 try:
                     # Additional custom gesture: Pinching
-                    if gesture == 'None' and norm_land_dist(hand[4], hand[8]) < 0.08:
+                    if gesture == 'None' and norm_land_dist(hand[4], hand[8]) < PINCHING_THRESHOLD:
                         hand_data['gesture'] = 'Pinching'
                 except:
                     pass
