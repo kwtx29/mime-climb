@@ -329,7 +329,7 @@ def _process_loop():
         except Exception:
             continue
         # Throttle processing to avoid pegging a CPU core
-        time.sleep(polling_rate)  # ~60 Hz
+        time.sleep(polling_rate/2)  # ~120 Hz
 
 
 def _camera_loop():
